@@ -1,0 +1,9 @@
+.gradle/
+.gradle-user/
+build/
+.env
+.env.*
+!.env.production.example
+.idea/
+*.iml
+*.log
