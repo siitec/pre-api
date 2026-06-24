@@ -10,6 +10,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import mx.tsj.connect.general.web.support.ApiResponses;
 import mx.tsj.connect.general.services.AuthenticationService.InvalidCredentialsException;
+import mx.tsj.connect.general.services.AccountException;
 import mx.tsj.connect.general.services.PartidasAccessDeniedException;
 
 @RestControllerAdvice
@@ -27,6 +28,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handlePartidasAccessDenied(PartidasAccessDeniedException exception) {
         return ResponseEntity.status(403)
                 .body(ApiResponses.error("ACCESS_DENIED", exception.getMessage()));
+    }
+
+    @ExceptionHandler(AccountException.class)
+    public ResponseEntity<?> handleAccountException(AccountException exception) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponses.error("ACCOUNT_ERROR", exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

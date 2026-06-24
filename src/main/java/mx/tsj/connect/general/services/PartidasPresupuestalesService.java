@@ -215,7 +215,7 @@ public class PartidasPresupuestalesService {
 
     public DashboardPresupuestoDto getDashboard(String username) {
         AccessContext access = resolveAccess(username);
-        List<DashboardSolicitudDto> solicitudes = getSolicitudSummary(username);
+        List<DashboardSolicitudDto> solicitudes = getSolicitudSummary(username, access);
         if (!access.hasDataScope()) {
             return emptyDashboard(solicitudes);
         }
@@ -273,7 +273,7 @@ public class PartidasPresupuestalesService {
                 solicitudes);
     }
 
-    private List<DashboardSolicitudDto> getSolicitudSummary(String username) {
+    private List<DashboardSolicitudDto> getSolicitudSummary(String username, AccessContext access) {
         Map<String, LinkedHashMap<String, Long>> counts = new LinkedHashMap<>();
         for (SolicitudType type : SOLICITUD_TYPES) {
             LinkedHashMap<String, Long> statuses = new LinkedHashMap<>();
@@ -281,18 +281,33 @@ public class PartidasPresupuestalesService {
             counts.put(type.id(), statuses);
         }
 
+        MapSqlParameterSource params = createParams(access)
+                .addValue("username", username.trim());
+        String solicitudScope = "";
+        if (access.hasDataScope()) {
+            solicitudScope = " AND k.Partida IN (:partidas)";
+            if (!access.global()) {
+                solicitudScope += " AND TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(k.UA)), '')) = :uaId";
+                params.addValue("uaId", access.localUaId());
+            }
+        } else {
+            solicitudScope = " AND 1 = 0";
+        }
+
         String sql = """
                 SELECT tipo, estatus, COUNT_BIG(*) AS total
                 FROM (
                     SELECT 'REQUISICIONES' AS tipo,
-                           COALESCE(NULLIF(UPPER(LTRIM(RTRIM(Status))), ''), 'SIN ESTATUS') AS estatus
-                    FROM dbo.KardexSolicitudes
-                    WHERE UPPER(LTRIM(RTRIM(Usuario))) = UPPER(:username)
+                           COALESCE(NULLIF(UPPER(LTRIM(RTRIM(k.Status))), ''), 'SIN ESTATUS') AS estatus
+                    FROM dbo.KardexSolicitudes k
+                    WHERE 1 = 1
+                    %s
                     UNION ALL
                     SELECT 'CAJA_CHICA',
-                           COALESCE(NULLIF(UPPER(LTRIM(RTRIM(Status))), ''), 'SIN ESTATUS')
-                    FROM dbo.KardexSolicitudesCaja
-                    WHERE UPPER(LTRIM(RTRIM(Usuario))) = UPPER(:username)
+                           COALESCE(NULLIF(UPPER(LTRIM(RTRIM(k.Status))), ''), 'SIN ESTATUS')
+                    FROM dbo.KardexSolicitudesCaja k
+                    WHERE 1 = 1
+                    %s
                     UNION ALL
                     SELECT 'CAPITULO_CUATRO',
                            COALESCE(NULLIF(UPPER(LTRIM(RTRIM(Status))), ''), 'SIN ESTATUS')
@@ -306,8 +321,7 @@ public class PartidasPresupuestalesService {
                 ) registros
                 WHERE estatus <> 'DOCUMENTOS EN DRIVE'
                 GROUP BY tipo, estatus
-                """;
-        MapSqlParameterSource params = new MapSqlParameterSource().addValue("username", username.trim());
+                """.formatted(solicitudScope, solicitudScope);
         jdbcTemplate.query(sql, params, resultSet -> {
             LinkedHashMap<String, Long> statuses = counts.get(resultSet.getString("tipo"));
             if (statuses != null) {

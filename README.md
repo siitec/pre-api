@@ -65,7 +65,7 @@ Authorization: Bearer <token>
 
 Devuelve el disponible (`Clave.Monto`), comprometido y ejercido totalizados. El presupuesto asignado corresponde a la suma de estos tres importes. Tambien incluye el numero de partidas con informacion y todas las partidas autorizadas para la grafica del dashboard. Los valores respetan roles, partidas autorizadas y alcance `LOCAL/GLOBAL`.
 
-La misma respuesta incluye los conteos del usuario autenticado en `KardexSolicitudes`, `KardexSolicitudesCaja`, `KardexSolicitudesCapituloCuatro` y `KardexViaticos`, agrupados por estatus. La comparacion del campo `Usuario` ignora mayusculas, minusculas y espacios laterales.
+La misma respuesta incluye conteos agrupados por estatus. `KardexSolicitudes` y `KardexSolicitudesCaja` se cuentan por las partidas autorizadas para el rol y respetan el alcance `LOCAL/GLOBAL`; para perfiles locales tambien se filtran por la `UA` del usuario. `KardexSolicitudesCapituloCuatro` y `KardexViaticos` se mantienen por usuario autenticado porque sus indicadores actuales no dependen de las partidas mostradas en el dashboard. La comparacion del campo `Usuario` ignora mayusculas, minusculas y espacios laterales.
 
 ```http
 GET /api/partidas-presupuestales?page=1&pageSize=25&search=&sortBy=cog&sortOrder=asc

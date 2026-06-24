@@ -36,6 +36,9 @@ public class Usuario {
     @Column(name = "Puesto", length = 100)
     private String puesto;
 
+    @Column(name = "Responsable", length = 200)
+    private String responsable;
+
     public Integer getId() { return id; }
     public String getStatus() { return status; }
     public String getUsuario() { return usuario; }
@@ -45,4 +48,8 @@ public class Usuario {
     public String getPermisos() { return permisos; }
     public String getArea() { return area; }
     public String getPuesto() { return puesto; }
+    public String getResponsable() { return responsable; }
+
+    public void setPassword(String password) { this.password = password; }
+    public void setPuesto(String puesto) { this.puesto = puesto; }
 }
