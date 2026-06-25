@@ -39,6 +39,9 @@ public class Usuario {
     @Column(name = "Responsable", length = 200)
     private String responsable;
 
+    @Column(name = "Campus", length = 50)
+    private String campus;
+
     public Integer getId() { return id; }
     public String getStatus() { return status; }
     public String getUsuario() { return usuario; }
@@ -49,7 +52,14 @@ public class Usuario {
     public String getArea() { return area; }
     public String getPuesto() { return puesto; }
     public String getResponsable() { return responsable; }
+    public String getCampus() { return campus; }
 
     public void setPassword(String password) { this.password = password; }
+    public void setStatus(String status) { this.status = status; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setUa(String ua) { this.ua = ua; }
+    public void setArea(String area) { this.area = area; }
     public void setPuesto(String puesto) { this.puesto = puesto; }
+    public void setResponsable(String responsable) { this.responsable = responsable; }
+    public void setCampus(String campus) { this.campus = campus; }
 }
