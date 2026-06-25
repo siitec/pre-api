@@ -12,6 +12,7 @@ import mx.tsj.connect.general.web.support.ApiResponses;
 import mx.tsj.connect.general.services.AuthenticationService.InvalidCredentialsException;
 import mx.tsj.connect.general.services.AccountException;
 import mx.tsj.connect.general.services.PartidasAccessDeniedException;
+import mx.tsj.connect.general.services.UsuariosException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -34,6 +35,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleAccountException(AccountException exception) {
         return ResponseEntity.badRequest()
                 .body(ApiResponses.error("ACCOUNT_ERROR", exception.getMessage()));
+    }
+
+    @ExceptionHandler(UsuariosException.class)
+    public ResponseEntity<?> handleUsuariosException(UsuariosException exception) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponses.error("USUARIOS_ERROR", exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
