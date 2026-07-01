@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,6 @@ import mx.tsj.connect.general.repositories.UsuarioRepository;
 
 @Service
 public class UsuariosService {
-    private static final String MODULE_NAME = "USUARIOS";
     private static final String DEFAULT_PASSWORD = "12345678";
     private static final String DEFAULT_PERMISOS =
             "111100111110000000000000000000000000000000000000000111000000000000100000";
@@ -40,14 +40,17 @@ public class UsuariosService {
     private final UsuarioRepository usuarioRepository;
     private final AuthorizationService authorizationService;
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final Integer usuariosModuleId;
 
     public UsuariosService(
             UsuarioRepository usuarioRepository,
             AuthorizationService authorizationService,
-            NamedParameterJdbcTemplate jdbcTemplate) {
+            NamedParameterJdbcTemplate jdbcTemplate,
+            @Value("${app.modules.usuarios-id:2}") Integer usuariosModuleId) {
         this.usuarioRepository = usuarioRepository;
         this.authorizationService = authorizationService;
         this.jdbcTemplate = jdbcTemplate;
+        this.usuariosModuleId = usuariosModuleId;
     }
 
     public UsuariosPage findAll(
@@ -425,7 +428,7 @@ public class UsuariosService {
         Usuario usuario = usuarioRepository.findFirstByUsuarioIgnoreCase(username)
                 .orElseThrow(() -> new PartidasAccessDeniedException("El usuario de la sesión no existe."));
         return authorizationService.getModulos(usuario.getId()).stream()
-                .filter(module -> MODULE_NAME.equals(normalize(module.nombre())))
+                .filter(module -> usuariosModuleId.equals(module.id()))
                 .findFirst()
                 .filter(module -> module.acciones().ejecutar())
                 .orElseThrow(() -> new PartidasAccessDeniedException("No tiene acceso al módulo de usuarios."));
@@ -454,10 +457,6 @@ public class UsuariosService {
                     u.Responsable LIKE :search
                  )
                 """;
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.trim().toUpperCase();
     }
 
     private String trimToNull(String value) {

@@ -14,6 +14,7 @@ import mx.tsj.connect.general.dto.DashboardEstatusDto;
 import mx.tsj.connect.general.dto.DashboardPartidaDto;
 import mx.tsj.connect.general.dto.DashboardPresupuestoDto;
 import mx.tsj.connect.general.dto.DashboardSolicitudDto;
+import mx.tsj.connect.general.dto.AccionesModulo;
 import mx.tsj.connect.general.dto.ModuloAutorizado;
 import mx.tsj.connect.general.dto.PartidaPresupuestalDetalleDto;
 import mx.tsj.connect.general.dto.PartidaPresupuestalExportDto;
@@ -214,7 +215,7 @@ public class PartidasPresupuestalesService {
     }
 
     public DashboardPresupuestoDto getDashboard(String username) {
-        AccessContext access = resolveAccess(username);
+        AccessContext access = resolveDashboardAccess(username);
         List<DashboardSolicitudDto> solicitudes = getSolicitudSummary(username, access);
         if (!access.hasDataScope()) {
             return emptyDashboard(solicitudes);
@@ -341,6 +342,54 @@ public class PartidasPresupuestalesService {
         return result;
     }
 
+    private AccessContext resolveDashboardAccess(String username) {
+        Usuario usuario = usuarioRepository.findFirstByUsuarioIgnoreCase(username)
+                .orElseThrow(() -> new PartidasAccessDeniedException("El usuario de la sesión no existe."));
+        List<DashboardAccessRow> rows = jdbcTemplate.query(
+                """
+                SELECT
+                    r.nombre AS rolNombre,
+                    pf.alcance AS alcance,
+                    partida.clave AS partida
+                FROM dbo.Perfiles pf
+                INNER JOIN dbo.Roles r ON r.id = pf.id_Rol
+                LEFT JOIN dbo.PartidasRol partidaRol ON partidaRol.id_Rol = r.id
+                LEFT JOIN dbo.Partidas partida ON partida.id = partidaRol.id_Partida
+                WHERE pf.id_Usuario = :usuarioId
+                ORDER BY r.nombre, partida.clave
+                """,
+                new MapSqlParameterSource("usuarioId", usuario.getId()),
+                (resultSet, rowNum) -> new DashboardAccessRow(
+                        resultSet.getString("rolNombre"),
+                        resultSet.getString("alcance"),
+                        resultSet.getString("partida")));
+
+        List<String> roles = rows.stream()
+                .map(DashboardAccessRow::rolNombre)
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        List<String> partidas = rows.stream()
+                .map(DashboardAccessRow::partida)
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        String alcance = rows.stream()
+                .anyMatch(row -> "GLOBAL".equalsIgnoreCase(row.alcance())) ? "GLOBAL" : "LOCAL";
+        ModuloAutorizado module = new ModuloAutorizado(
+                MODULE_ID,
+                "Partidas Presupuestales",
+                roles,
+                alcance,
+                partidas,
+                new AccionesModulo(true, false, false, false, true, false, false));
+        boolean global = "GLOBAL".equals(module.alcance());
+        Integer localUaId = global ? null : parseUaId(usuario.getUa());
+        return new AccessContext(module, global, localUaId);
+    }
+
     private AccessContext resolveAccess(String username) {
         Usuario usuario = usuarioRepository.findFirstByUsuarioIgnoreCase(username)
                 .orElseThrow(() -> new PartidasAccessDeniedException("El usuario de la sesión no existe."));
@@ -419,5 +468,8 @@ public class PartidasPresupuestalesService {
     }
 
     private record SolicitudType(String id, String name, List<String> statuses) {
+    }
+
+    private record DashboardAccessRow(String rolNombre, String alcance, String partida) {
     }
 }
